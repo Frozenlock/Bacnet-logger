@@ -1,0 +1,26 @@
+* BACnet-logger
+
+  An application used to scan a BACnet network at regulvar interval
+  and send the data back to a webserver.
+
+  Similar to [[https://github.com/Frozenlock/Bacnet-scan][Bacnet-scan]]. Requires BACnet/IP to work.
+
+* How to use
+
+  Create a =config.cjm= file, with the following content (as needed):
+:  {:logger-password "my-password", 
+: :project-id "afh352vds44ae4e7182a471b6"
+: :broadcast-address "192.168.0.255"
+: :port 47808}
+
+  Then run the compiled jar. Default implementation scans the network
+  at every 10 min.
+
+* TODO Make an installation file
+* TODO Install as a Windows service
+
+** License
+
+   Copyright (C) 2012 Frozenlock
+
+   GNU General Public License version 3.0 (GPLv3)
