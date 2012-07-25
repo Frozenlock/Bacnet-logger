@@ -14,13 +14,13 @@
 : :port 47808}
 
   Then run the compiled jar. Default implementation scans the network
-  at every 10 min.
+  very 10 min.
 
 * TODO Make an installation file
 * TODO Install as a Windows service
 
-** License
+* License
 
-   Copyright (C) 2012 Frozenlock
+  Copyright (C) 2012 Frozenlock
 
-   GNU General Public License version 3.0 (GPLv3)
+  GNU General Public License version 3.0 (GPLv3)
