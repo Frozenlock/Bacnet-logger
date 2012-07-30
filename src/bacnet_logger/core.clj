@@ -64,4 +64,5 @@
   (map #(ot/stop (val %)) logger))
 
 (defn -main [& args]
+  (javax.swing.JOptionPane/showMessageDialog nil "Now logging, thank you!")
   (repetitive-logging))
