@@ -16,7 +16,7 @@
 (defn mapply [f & args] (apply f (apply concat (butlast args) (last args))))
 
 (defn get-configs []
-  (try (read-string (slurp "configs.cjm"))
+  (try (read-string (slurp "config.cjm"))
        (catch Exception e)))
 
 
