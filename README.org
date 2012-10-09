@@ -3,6 +3,11 @@
   regular interval and send back the data to a webserver (in this case
   https://bacnethelp.com).
 
+* Version notes
+** V 1.0.2
+   - Corrected a bug where the log files would go in the wrong folder
+     an never be sent back to the server.
+   - Added filters options
 * Immediate use
   If you have a typical BACnet network, you can simply download the
   logger package located in every project. Each one have the necessary
@@ -64,6 +69,14 @@
                     sent and saved. 
    - :scanner-id :: The logger BACnet device instance. Must be unique
                     on the network. Default to 1337.
+   - :filter-properties :: If a device match the map properties,
+        discard it. Here is an example of 2 filters: [{:Object-name "romm-temp"} {:Model-name "DSC1616E"}]
+   - :time-interval :: The interval (in minutes) at which the network should be scanned.
+   - :max-range :: Maximum device ID to scan.
+   - :min-range :: Minimum device ID to scan.
+   - :id-to-remove :: Remove selected devices from a scan (ex: [200, 300, 400]).
+   - id-to-keep :: Keep ONLY the selected devices. Will override =id-to-remove=.
+
 * Fail-Safe
   In case of connection problem the logger will automatically keep the
   records locally as long as the connection isn't fixed. This insures
