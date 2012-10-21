@@ -1,8 +1,8 @@
-(defproject bacnet-logger "1.0.2"
+(defproject bacnet-logger "1.0.3"
   :description "Automatic logger for a BACnet network"
   :dependencies [[org.clojure/clojure "1.4.0"]
                  [clj-time "0.4.2"]
-                 [bacnet-scan-utils "1.0.5"]
+                 [bacnet-scan-utils "1.0.6"]
                  [org.clojars.frozenlock/gzip64 "1.0.0"]
                  [clj-http "0.4.1"]
                  [seesaw "1.4.2"]
