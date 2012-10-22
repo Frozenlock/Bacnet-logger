@@ -11,9 +11,10 @@
         [seesaw.swingx]
         [seesaw.mig]))
 
-(def posting-address "https://bacnethelp.com:8443/logger/post-to-project")
-;;"https://bacnethelp.com:8443/logger/post-to-project")
-(def config-address "https://bacnethelp.com:8443/logger/get-config")
+(import 'java.util.Calendar)
+
+(declare posting-address)
+(declare config-address)
 
 (defmacro get-logger-version []
   (let [x# (System/getProperty "bacnet-logger.version")]
@@ -22,6 +23,13 @@
 (defn quit []
   (System/exit 0))
 
+(def path (str (System/getProperty "user.home")"/BH-Logger")) 
+
+(defn mdir-spit
+  "Try to make the directories leading to the file if they don't
+  already exists." [f content]
+  (clojure.java.io/make-parents f)
+  (spit f content))
 
 ;; ================================
 (defn fdialog
@@ -34,21 +42,22 @@
  (let [f (frame  :icon st/icon-running :title "BACnet Help Logger")]
    (.setUndecorated f true)
    (show! f)
-   (-> (apply dialog dialog-args) pack! show!)
-       (dispose! f)))
+   (let [dialog-result (-> (apply dialog dialog-args) pack! show!)]
+     (dispose! f)
+     dialog-result)))
 ;; ================================
 
 (defn mapply [f & args] (apply f (apply concat (butlast args) (last args))))
 
 (defn get-configs
   "Get the local  configs"[]
-  (let [config-filename (str (be/get-running-directory-path) "/config.cjm")]
+  (let [config-filename (str path "/config.cjm")]
     (try (read-string (slurp config-filename))
          (catch Exception e))))
 
 (defn save-configs
-  "Save dat to config file." [data]
-  (spit (str (be/get-running-directory-path) "/config.cjm") data))
+  "Save data to config file." [data]
+  (mdir-spit (str path "/config.cjm") data))
   
 
 (defn get-configs-from-server
@@ -65,7 +74,7 @@
                         (catch Exception e))]
     (when new-config
       (save-configs (merge new-config {:project-id id :logger-password psw}))
-      true)))
+      true)))  
 
 (defn scan-and-spit []
   (let [configs (get-configs)
@@ -75,13 +84,13 @@
                                                          :get-trend-log false
                                                          :get-backup false)))]
     (when (map? data)
-      (be/spit-to-log "BH" (g/gz64 (str data))))))
+      (mdir-spit (str path "/" "BH" (.getTimeInMillis (Calendar/getInstance)) ".log") (g/gz64 (str data))))))
 
 
 (defn find-unsent-logs []
   (let [filename-list (map #(.getAbsolutePath %)
                            (seq (.listFiles (clojure.java.io/file
-                                             (be/get-running-directory-path)))))]
+                                             path))))]
     (filter #(re-find #"BH.*\.log" %) filename-list)))
 
 
@@ -117,7 +126,7 @@
 (defn start-logging []
   (let [time-interval (* 60000 (or (:time-interval (get-configs)) 10))];convert min in ms
     {:logger (ot/every time-interval scan-and-spit pool :initial-delay time-interval) ;scan the BACnet network
-     :send-logs (ot/at (+ 3600000 (ot/now)) ;delay 1 hour (3600000ms)
+     :send-logs (ot/at (+ 3600100 (ot/now)) ;delay 1 hour (3600000ms)
                        #(do (send-logs) ;send back to server
                             (st/update-tray! (not (get-configs-from-server))) ;in case the configs have changed
                             (restart-logging))
@@ -160,7 +169,7 @@
                 :content
                 (mig-panel
                  :constraints ["wrap 2" "[shrink 0]20px[300, grow, fill]"]
-                 :items [["Project-id"] [(text :id :project :text project-id)] ["Password"] [(text :id :psw :text logger-password)]
+                 :items [["Project id"] [(text :id :project :text project-id)] ["Password"] [(text :id :psw :text logger-password)]
                          ["Get your project-id: "][(hyperlink :uri "https://bacnethelp.com/my-projects"
                                                                                       :text "My projects")]])
                 :option-type :ok-cancel
@@ -192,7 +201,7 @@
                                                                                                      :constraints ["wrap 1"]
                                                                                                      :items [[(str "Logger V" (get-logger-version))]
                                                                                                              [(str "Configured for project: " (:project-id (get-configs)))]
-                                                                                                             [(str "Temporary files are in: " (be/get-running-directory-path))]]))]
+                                                                                                             [(str "Temporary files are in: " path)]]))]
                                [:separator]
                                ["Exit" #(quit)]]))
 
@@ -205,13 +214,20 @@
     (init-config-dialog)
     true))
 
-(defn -main [& args]
-  (native!)
-  (add-to-system-tray)
-  (when (and (init-config)(test-network))
-    (get-configs-from-server) ;update the configs        
-    (start-logging)
-    (st/tray-logging!)))
-    ;(quit)))
+(defn -main
+  "Optional argument is the port to use when sending to the server."
+  [& port]
+  (let [dest-port (when (first port)
+                    (str ":" (first port)))]
+    (def posting-address (str "https://bacnethelp.com"dest-port"/logger/post-to-project"))
+    (def config-address (str "https://bacnethelp.com"dest-port"/logger/get-config"))
+    (print posting-address)
+    (native!)
+    (add-to-system-tray)
+    (when (and (init-config)(test-network))
+      (get-configs-from-server) ;update the configs        
+      (start-logging)
+      (st/tray-logging!))))
+  ;;(quit)))
 
   
