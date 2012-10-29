@@ -1,4 +1,4 @@
-(defproject bacnet-logger "1.0.3"
+(defproject bacnet-logger "1.0.4"
   :description "Automatic logger for a BACnet network"
   :dependencies [[org.clojure/clojure "1.4.0"]
                  [clj-time "0.4.2"]

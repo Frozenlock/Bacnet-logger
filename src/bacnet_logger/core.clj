@@ -77,14 +77,16 @@
       true)))  
 
 (defn scan-and-spit []
-  (let [configs (get-configs)
-        data (b/with-local-device (mapply b/new-local-device configs)
-               (let [rds (mapply b/get-remote-devices-and-info configs)]
-                 (b/remote-devices-object-and-properties rds
-                                                         :get-trend-log false
-                                                         :get-backup false)))]
-    (when (map? data)
-      (mdir-spit (str path "/" "BH" (.getTimeInMillis (Calendar/getInstance)) ".log") (g/gz64 (str data))))))
+  (try (let [configs (get-configs)
+             data (b/with-local-device (mapply b/new-local-device configs)
+                    (let [rds (mapply b/get-remote-devices-and-info configs)]
+                      (b/remote-devices-object-and-properties rds
+                                                              :get-trend-log false
+                                                              :get-backup false)))]
+         (when (map? data)
+           (mdir-spit (str path "/" "BH" (.getTimeInMillis (Calendar/getInstance)) ".log")
+                      (g/gz64 (str data)))))
+       (catch Exception e)))
 
 
 (defn find-unsent-logs []
@@ -169,13 +171,18 @@
                 :content
                 (mig-panel
                  :constraints ["wrap 2" "[shrink 0]20px[300, grow, fill]"]
-                 :items [["Project id"] [(text :id :project :text project-id)] ["Password"] [(text :id :psw :text logger-password)]
+                 :items [["Project ID"] [(text :id :project :text project-id)] ["Password"] [(text :id :psw :text logger-password)]
                          ["Get your project-id: "][(hyperlink :uri "https://bacnethelp.com/my-projects"
                                                                                       :text "My projects")]])
                 :option-type :ok-cancel
-                :options [(action :name "Retrieve" :handler (fn [e] (let [id-psw {:project-id (text (select (to-root e) [:#project]))
-                                                                                  :logger-password (text (select (to-root e) [:#psw]))}]
-                                                                      (if (get-configs-from-server id-psw) (do (fdialog :content "Success!" :type :info)
+                :options [(action :name "Retrieve" :handler (fn [e] (let [id-psw {:project-id (clojure.string/trim (text (select (to-root e) [:#project])))
+                                                                                  :logger-password (clojure.string/trim (text (select (to-root e) [:#psw])))}]
+                                                                      (if (get-configs-from-server id-psw) (do (fdialog :title "Success!" :content
+                                                                                                                        (mig-panel
+                                                                                                                         :constraints ["wrap 1"]
+                                                                                                                         :items [["Logging now in progress."]
+                                                                                                                                 ["You can access the logger via the system tray"]])
+                                                                                                                        :type :info)
                                                                                                                (return-from-dialog e true))
                                                                           (fdialog :title "Oups!" :type :error :content
                                                                                                     (mig-panel
