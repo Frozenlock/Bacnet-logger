@@ -138,19 +138,37 @@
 (defn test-network
   "Send a WhoIs and make sure that at least one device answers. If
   not, suggest to use the scanner to check the network."[]
-  (let [result (not (empty? (b/get-remote-devices-list)))]
-    (when-not result
-      (future (fdialog :type :error
-                      :content
-                      (mig-panel
-                       :constraints ["wrap 1"]
-                       :items
-                       [["There is no visible BACnet devices on the network."]
-                        ["Would you like to use the scanner application to check your network?"]])
-                      :option-type :ok-cancel
-                      :success-fn (fn [e] (clojure.java.browse/browse-url
-                                           "https://bacnethelp.com/how-to/scanner")))))
-    result))
+  (let [configs (get-configs)
+        result (try (b/get-remote-devices-list
+                     :local-device (mapply b/new-local-device configs)
+                     :dest-port (:port configs))
+                    (catch java.net.BindException e
+                      (do (fdialog :type :error
+                                   :title "Bind error"
+                                   :content
+                                   (mig-panel
+                                    :constraints ["wrap 1"]
+                                    :items
+                                    [[(str "The logger can't bind with the provided BACnet port ("
+                                           (or (:port configs) 47808)").")]
+                                     ["There is probably another application already running with it."]
+                                     ["You will have to close the other application or use another machine."]]))
+                          :bind-error)))]
+    (when (not (= :bind-error result))
+      (if (empty? result)
+        (do (future (fdialog :type :error
+                             :title "Nothing on the network"
+                             :content
+                             (mig-panel
+                              :constraints ["wrap 1"]
+                              :items
+                              [["There is no visible BACnet devices on the network."]
+                               ["Would you like to use the scanner application to check your network?"]])
+                             :option-type :ok-cancel
+                             :success-fn (fn [e] (clojure.java.browse/browse-url
+                                                  "https://bacnethelp.com/how-to/scanner"))))
+            nil)
+            result))))
 
 (defn restart-with-test
   "Test the network and start the logging if success."[]
@@ -161,7 +179,22 @@
       (do (stop-logging)
           (st/tray-neutral!)))))
     
-    
+
+(def legend
+  (let [in-legend
+        (mig-panel :constraints ["wrap 2"]
+                   :items [[(seesaw.core/make-widget (clojure.java.io/resource "bh-icon-32px-logging.png"))]
+                           ["Logging: everything is fine."]
+                           [(seesaw.core/make-widget (clojure.java.io/resource "bh-icon-32px-error.png"))]
+                           ["ERROR: Can't reach server, will try again next hour."]
+                           [(seesaw.core/make-widget (clojure.java.io/resource "bh-icon-32px-neutral.png"))]
+                           ["Stopped: you have to re-start manually using the system tray."]])]
+    (mig-panel :constraints ["wrap 1"]
+               :items [[:separator         "grow, span,"]
+                       ["Legend:"]
+                       [in-legend]])))
+
+
 (defn init-config-dialog
   "Ask the user for the initial project-id and password. Try to import
   the remaining configs from the server. True if success, nil otherwise."[]
@@ -181,7 +214,9 @@
                                                                                                                         (mig-panel
                                                                                                                          :constraints ["wrap 1"]
                                                                                                                          :items [["Logging now in progress."]
-                                                                                                                                 ["You can access the logger via the system tray"]])
+                                                                                                                                 ["You can access the logger via the system tray"]
+                                                                                                                                 [(seesaw.core/make-widget (clojure.java.io/resource "systray.png"))]
+                                                                                                                                 [legend]])
                                                                                                                         :type :info)
                                                                                                                (return-from-dialog e true))
                                                                           (fdialog :title "Oups!" :type :error :content
@@ -208,7 +243,8 @@
                                                                                                      :constraints ["wrap 1"]
                                                                                                      :items [[(str "Logger V" (get-logger-version))]
                                                                                                              [(str "Configured for project: " (:project-id (get-configs)))]
-                                                                                                             [(str "Temporary files are in: " path)]]))]
+                                                                                                             [(str "Temporary files are in: " path)]
+                                                                                                             [legend]]))]
                                [:separator]
                                ["Exit" #(quit)]]))
 
