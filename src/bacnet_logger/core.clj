@@ -16,6 +16,13 @@
 (declare posting-address)
 (declare config-address)
 
+(defn safe-read
+  "Evaluate the string in a safe way. If error while reading, return
+  nil" [s]
+  (try (binding [*read-eval* false]
+         (read-string s))
+       (catch Exception e)))
+
 (defmacro get-logger-version []
   (let [x# (System/getProperty "bacnet-logger.version")]
     `~x#))
@@ -52,8 +59,7 @@
 (defn get-configs
   "Get the local  configs"[]
   (let [config-filename (str path "/config.cjm")]
-    (try (read-string (slurp config-filename))
-         (catch Exception e))))
+    (safe-read (slurp config-filename))))
 
 (defn save-configs
   "Save data to config file." [data]
@@ -67,14 +73,13 @@
   (let [local-config (get-configs)
         id (or project-id (:project-id local-config))
         psw (or logger-password (:logger-password local-config))
-        new-config (try (read-string (:body (client/get config-address
-                                                        {:query-params {:project-id id
-                                                                        :logger-password psw
-                                                                    :logger-version (get-logger-version)}})))
-                        (catch Exception e))]
+        new-config (safe-read (:body (client/get config-address
+                                                 {:query-params {:project-id id
+                                                                 :logger-password psw
+                                                                 :logger-version (get-logger-version)}})))]
     (when new-config
       (save-configs (merge new-config {:project-id id :logger-password psw}))
-      true)))  
+      true)))
 
 (defn scan-and-spit []
   (try (let [configs (get-configs)
