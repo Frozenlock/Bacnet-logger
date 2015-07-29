@@ -1,4 +1,5 @@
-For information on how to use, please see https://bacnethelp.com/how-to/logger
+DEPRECATED in favor of [[https://github.com/hvac-io/vigilia-logger][Vigilia Logger]]
+
 
 Copyright (C) 2012 Frozenlock
 
